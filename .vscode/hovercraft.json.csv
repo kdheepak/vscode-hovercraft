@@ -1,0 +1,6 @@
+keyword,description,category,url
+Promise,Represents the eventual completion or failure of an asynchronous operation,JavaScript,https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
+async,Declares an asynchronous function that returns a Promise,JavaScript,https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/async_function
+await,Pauses async function execution until a Promise settles,JavaScript,https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await
+useState,React Hook that lets you add state to functional components,React,https://react.dev/reference/react/useState
+useEffect,React Hook for performing side effects in functional components,React,https://react.dev/reference/react/useEffect
