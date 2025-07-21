@@ -2,7 +2,7 @@
   "name": "hovercraft",
   "displayName": "Hovercraft - CSV Hover Provider",
   "description": "Provides hover information from CSV files in your workspace",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "kdheepak",
   "repository": {
     "type": "git",
