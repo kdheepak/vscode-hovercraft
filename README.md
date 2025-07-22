@@ -7,11 +7,9 @@ any text pattern in your codebase.
 ## Features
 
 - 🎯 Language Agnostic - Works with any file type or programming language
-- 📝 Simple CSV Format - Define hovers using familiar spreadsheet-friendly CSV files
-- 🔄 Hot Reload - Changes to CSV files are picked up automatically
+- 📝 Simple CSV or JSON Format - Define hovers using CSV files or JSON files
 - 🏢 Workspace Specific - Each project can have its own hover definitions
-- 🚀 Fast & Lightweight - Powered by Python Language Server Protocol
-- 🔧 Zero Configuration - Just drop CSV files in `.vscode` and they work
+- 🔧 Zero Configuration - Just drop CSV or JSON files in `.vscode` and they work
 
 ## Installation
 
