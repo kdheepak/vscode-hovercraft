@@ -205,7 +205,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", pattern: "**/*" }],
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/.vscode/hover.*.csv"),
+      fileEvents: vscode.workspace.createFileSystemWatcher("**/.vscode/hovercraft.*.csv"),
     },
     outputChannelName: "Hovercraft Language Server",
     traceOutputChannel: vscode.window.createOutputChannel("Hovercraft Language Server Trace"),
