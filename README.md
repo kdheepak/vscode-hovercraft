@@ -85,6 +85,21 @@ Alternatively, add this to your `settings.json`:
 If not set, the extension will use the default `uv` in your system PATH. If `uv` is not available,
 it will be installed automatically by the extension.
 
+## Development
+
+### Running Tests
+
+```bash
+# All tests
+./scripts/e2e.sh
+
+# VSCode extension tests only
+npm test
+
+# Python language server tests only  
+cd hovercraft && uv run python -m pytest tests/ -v
+```
+
 ## Troubleshooting
 
 ### No hovers appearing

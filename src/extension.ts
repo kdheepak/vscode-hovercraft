@@ -68,8 +68,12 @@ async function installUv(outputChannel: vscode.OutputChannel): Promise<string> {
       },
     });
 
-    if (stdout) outputChannel.appendLine(stdout);
-    if (stderr) outputChannel.appendLine(stderr);
+    if (stdout) {
+      outputChannel.appendLine(stdout);
+    }
+    if (stderr) {
+      outputChannel.appendLine(stderr);
+    }
 
     outputChannel.appendLine("uv installed successfully!");
 
