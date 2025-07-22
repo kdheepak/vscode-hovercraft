@@ -33,7 +33,6 @@ class CSVHoverProvider:
 
     def __init__(self, workspace_path: Path):
         self.workspace_path = workspace_path
-        self.vscode_path = workspace_path / ".vscode"
         # Store entries per file extension
         self.entries_by_extension: dict[str, list[HoverEntry]] = {}
         self.csv_files: dict[str, pd.DataFrame] = {}
@@ -63,15 +62,18 @@ class CSVHoverProvider:
         return extension
 
     def load_all_csv_files(self):
-        """Load all CSV files in the .vscode directory."""
-        if not self.vscode_path.exists():
-            logger.info(f".vscode directory not found at {self.vscode_path}")
-            return
-
-        csv_files = list(self.vscode_path.glob("hovercraft.*.csv"))
-        logger.info(f"Found {len(csv_files)} hover CSV files in .vscode directory")
-
-        for csv_file in csv_files:
+        """Load all CSV files in the .vscode and .data directories."""
+        csv_dirs = [self.workspace_path / ".vscode", self.workspace_path / ".data"]
+        all_csv_files = []
+        for csv_dir in csv_dirs:
+            if csv_dir.exists():
+                found = list(csv_dir.glob("hovercraft.*.csv"))
+                logger.info(f"Found {len(found)} hover CSV files in {csv_dir}")
+                all_csv_files.extend(found)
+            else:
+                logger.info(f"Directory not found: {csv_dir}")
+        logger.info(f"Total hover CSV files found: {len(all_csv_files)}")
+        for csv_file in all_csv_files:
             try:
                 self.load_csv_file(csv_file)
             except Exception as e:
