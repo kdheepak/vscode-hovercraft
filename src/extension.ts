@@ -124,14 +124,14 @@ async function ensureLanguageServerDependencies(serverPath: string, uvPath: stri
   const outputChannel = vscode.window.createOutputChannel("My Language Server Setup");
 
   try {
-    // Check if .venv exists
+    // Always remove any existing .venv to avoid cross-machine issues
     const venvPath = path.join(serverPath, ".venv");
-    if (!fs.existsSync(venvPath)) {
-      outputChannel.appendLine("Creating virtual environment...");
+    if (fs.existsSync(venvPath)) {
+      outputChannel.appendLine("Removing existing virtual environment to ensure compatibility...");
       outputChannel.show();
-
-      await execAsync(`"${uvPath}" venv`, { cwd: serverPath });
-      outputChannel.appendLine("Virtual environment created.");
+      // Remove .venv directory recursively
+      fs.rmSync(venvPath, { recursive: true, force: true });
+      outputChannel.appendLine("Old virtual environment removed.");
     }
 
     // Always sync to ensure dependencies are up to date
