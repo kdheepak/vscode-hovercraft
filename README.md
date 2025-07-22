@@ -1,15 +1,15 @@
-# `hovercraft` - CSV-Powered Hover Provider for VSCode
+# `hovercraft` - CSV/JSON-Powered Hover Provider for VSCode
 
 `hovercraft` is a VSCode extension that provides customizable hover information for any programming
-language using simple CSV files. Define your own hover tooltips for keywords, functions, APIs, or
-any text pattern in your codebase.
+language using simple CSV or JSON files. Define your own hover tooltips for keywords, functions,
+APIs, or any text pattern in your codebase.
 
 ## Features
 
 - 🎯 Language Agnostic - Works with any file type or programming language
-- 📝 Simple CSV or JSON Format - Define hovers using CSV files or JSON files
+- 📝 Simple CSV or JSON Format - Define hovers using CSV or JSON files
 - 🏢 Workspace Specific - Each project can have its own hover definitions
-- 🔧 Zero Configuration - Just drop CSV or JSON files in `.vscode` and they work
+- 🔧 Zero Configuration - Just drop CSV or JSON files in `.data` or `.vscode` folder
 
 ## Installation
 
@@ -22,29 +22,43 @@ any text pattern in your codebase.
 
 ## Getting Started
 
-- Create a `.vscode` folder in your workspace (if it doesn't exist)
-- Add a CSV file named `.vscode/hovercraft.<extension>.csv` with columns:
+- Create a `.data` folder in your workspace (if it doesn't exist)
+- Add a CSV or JSON file named `.data/hovercraft.<extension>.csv` or
+  `.data/hovercraft.<extension>.json`:
 
+### CSV Format
+
+- Columns:
   - `keyword`: The text to match in your code
   - `description`: The hover text to display
   - `source_file`: (optional) The source file where this hover is defined
   - `category`: (optional) A category for grouping hovers
   - `url`: (optional) A URL to link to for more information
 
-- Define your hover information
-- Open a file with that extension and hover over keywords!
+### JSON Format
+
+- Array of objects, each with:
+  - `keyword`: The text to match in your code
+  - `description`: The hover text to display
+  - `source_file`: (optional) The source file where this hover is defined
+  - `category`: (optional) A category for grouping hovers
+  - `url`: (optional) A URL to link to for more information
 
 The file extension in the filename determines which files the hover applies to. The convention is:
 
 ```plaintext
-.vscode/hovercraft.<file-extension>.csv
+.data/hovercraft.<file-extension>.csv
+.data/hovercraft.<file-extension>.json
 ```
 
 Examples:
 
 - `hovercraft.py.csv` → Python files (.py)
+- `hovercraft.py.json` → Python files (.py)
 - `hovercraft.md.csv` → Markdown files (.md)
+- `hovercraft.md.json` → Markdown files (.md)
 - `hovercraft.custom.csv` → Custom files (.custom)
+- `hovercraft.custom.json` → Custom files (.custom)
 
 ## Requirements
 
@@ -74,9 +88,10 @@ If not set, the extension will use the default `uv` in your system PATH.
 
 ### No hovers appearing
 
-- Check CSV file location: Must be in `.vscode` folder
-- Check CSV filename: Must match pattern `hovercraft.<ext>.csv`
+- Check CSV/JSON file location: Must be in `.data` folder or in the `.data` folder
+- Check CSV/JSON filename: Must match pattern `hovercraft.<ext>.csv` or `hovercraft.<ext>.json`
 - Check CSV format: Must have `keyword` and `description` columns
+- Check JSON format: Must be an array of objects with `keyword` and `description` fields
 - Check Output panel: View → Output → "Hovercraft Language Server"
 
 ### Extension not activating
