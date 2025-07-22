@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hovercraft Language Server - CSV-powered hover provider."""
+"""Hovercraft Language Server - CSV and JSON-powered hover provider."""
 
 import sys
 import logging
@@ -20,7 +20,7 @@ from lsprotocol.types import (
     FileChangeType,
 )
 
-from .hover import CSVHoverProvider
+from .hover import CSVHoverProvider, JSONHoverProvider
 
 # Configure logging
 logging.basicConfig(
@@ -32,11 +32,12 @@ logger = logging.getLogger("hovercraft")
 
 
 class HovercraftServer(LanguageServer):
-    """Language server that provides hover information from CSV files."""
+    """Language server that provides hover information from CSV and JSON files."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.hover_provider: CSVHoverProvider | None = None
+        self.csv_hover_provider: CSVHoverProvider | None = None
+        self.json_hover_provider: JSONHoverProvider | None = None
 
 
 server = HovercraftServer("hovercraft", "v0.1.0")
@@ -49,13 +50,22 @@ def initialize(params: InitializeParams):
 
     if params.workspace_folders:
         workspace_path = Path(params.workspace_folders[0].uri.replace("file://", ""))
-        server.hover_provider = CSVHoverProvider(workspace_path)
-        server.hover_provider.load_all_csv_files()
+        server.csv_hover_provider = CSVHoverProvider(workspace_path)
+        server.csv_hover_provider.load_all_csv_files()
+        server.json_hover_provider = JSONHoverProvider(workspace_path)
+        server.json_hover_provider.load_all_json_files()
 
-        supported_extensions = server.hover_provider.get_supported_extensions()
+        supported_extensions = (
+            server.csv_hover_provider.get_supported_extensions()
+            | server.json_hover_provider.get_supported_extensions()
+        )
+        total_entries = (
+            server.csv_hover_provider.entry_count
+            + server.json_hover_provider.entry_count
+        )
         logger.info(
             f"Initialized with workspace: {workspace_path}\n"
-            f"Loaded {server.hover_provider.entry_count} entries\n"
+            f"Loaded {total_entries} entries\n"
             f"Supporting extensions: {', '.join(sorted(supported_extensions))}"
         )
 
@@ -63,55 +73,68 @@ def initialize(params: InitializeParams):
 @server.feature("workspace/didChangeWatchedFiles")
 def did_change_watched_files(params: DidChangeWatchedFilesParams):
     """Handle file change notifications."""
-    if not server.hover_provider:
+    if not server.csv_hover_provider or not server.json_hover_provider:
         return
 
     for change in params.changes:
         file_path = change.uri.replace("file://", "")
-
-        # Only process CSV files in .vscode directory with our pattern
         path = Path(file_path)
-        if (
-            path.parent.name == ".vscode"
-            and server.hover_provider.FILENAME_PATTERN.match(path.name)
-        ):
+
+        # CSV
+        if path.parent.name in [
+            ".vscode",
+            ".data",
+        ] and server.csv_hover_provider.FILENAME_PATTERN.match(path.name):
             logger.info(f"Hover CSV file changed: {file_path}")
 
             if change.type == FileChangeType.Deleted:
-                server.hover_provider.remove_csv_file(file_path)
+                server.csv_hover_provider.remove_csv_file(file_path)
             else:
-                server.hover_provider.reload_csv_file(file_path)
+                server.csv_hover_provider.reload_csv_file(file_path)
+
+        # JSON
+        if path.parent.name in [
+            ".vscode",
+            ".data",
+        ] and server.json_hover_provider.FILENAME_PATTERN.match(path.name):
+            logger.info(f"Hover JSON file changed: {file_path}")
+
+            if change.type == FileChangeType.Deleted:
+                server.json_hover_provider.remove_json_file(file_path)
+            else:
+                server.json_hover_provider.reload_json_file(file_path)
 
 
 @server.feature("textDocument/hover")
 def hover(params: HoverParams) -> Hover | None:
-    """Provide hover information."""
-    if not server.hover_provider:
+    """Provide hover information from both providers."""
+    if not server.csv_hover_provider or not server.json_hover_provider:
         return None
 
     document = server.workspace.get_document(params.text_document.uri)
 
-    # Get file extension from document URI
     file_path = Path(params.text_document.uri.replace("file://", ""))
     file_extension = file_path.suffix
 
-    # Get word at cursor position
     word = document.word_at_position(params.position)
 
     if not word:
         return None
 
-    # Get hover info for this word and file type
-    hover_info = server.hover_provider.get_hover_info(word, file_extension)
+    hover_info_csv = server.csv_hover_provider.get_hover_info(word, file_extension)
+    hover_info_json = server.json_hover_provider.get_hover_info(word, file_extension)
 
-    if hover_info:
-        # Calculate word range for hover
+    hover_infos = [info for info in [hover_info_csv, hover_info_json] if info]
+
+    if hover_infos:
+        combined = "\n- - -\n".join(hover_infos)
+
         start_char = params.position.character - len(word)
         if start_char < 0:
             start_char = 0
 
         return Hover(
-            contents=MarkupContent(kind=MarkupKind.Markdown, value=hover_info),
+            contents=MarkupContent(kind=MarkupKind.Markdown, value=combined),
             range=Range(
                 start=Position(line=params.position.line, character=start_char),
                 end=Position(

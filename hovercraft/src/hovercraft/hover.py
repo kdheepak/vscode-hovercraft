@@ -1,7 +1,8 @@
-"""CSV-based hover information provider."""
+"""CSV and JSON-based hover information provider."""
 
 import logging
 import re
+import json
 from pathlib import Path
 from typing import Set
 from dataclasses import dataclass, field
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HoverEntry:
-    """Represents a single hover entry from CSV."""
+    """Represents a single hover entry from CSV or JSON."""
 
     keyword: str
     description: str
@@ -249,6 +250,208 @@ class CSVHoverProvider:
                 lines.append("")
                 if entry.source_file is not None:
                     lines.append(f"*Source: {Path(entry.source_file).name}*")
+            output.append("\n".join(lines))
+        return "\n- - -\n".join(output)
+
+    def get_supported_extensions(self) -> Set[str]:
+        """Get all file extensions that have hover data."""
+        return set(self.entries_by_extension.keys())
+
+
+class JSONHoverProvider:
+    """Manages JSON files and provides hover information."""
+
+    FILENAME_PATTERN = re.compile(r"^hovercraft\.(.+)\.json$")
+
+    def __init__(self, workspace_path: Path):
+        self.workspace_path = workspace_path
+        self.entries_by_extension: dict[str, list[HoverEntry]] = {}
+        self.json_files: dict[str, list[dict]] = {}
+
+    @property
+    def entry_count(self) -> int:
+        """Get the total number of hover entries."""
+        total = 0
+        for ext_entries in self.entries_by_extension.values():
+            total += len(ext_entries)
+        return total
+
+    def load_all_json_files(self):
+        """Load all JSON files in the .vscode and .data directories."""
+        json_dirs = [self.workspace_path / ".vscode", self.workspace_path / ".data"]
+        all_json_files = []
+        for json_dir in json_dirs:
+            if json_dir.exists():
+                found = list(json_dir.glob("hovercraft.*.json"))
+                logger.info(f"Found {len(found)} hover JSON files in {json_dir}")
+                all_json_files.extend(found)
+            else:
+                logger.info(f"Directory not found: {json_dir}")
+        logger.info(f"Total hover JSON files found: {len(all_json_files)}")
+        for json_file in all_json_files:
+            try:
+                self.load_json_file(json_file)
+            except Exception as e:
+                logger.error(f"Failed to load {json_file}: {e}")
+
+    def load_json_file(self, file_path: Path):
+        """Load a single JSON file."""
+        try:
+            extension = self.parse_filename_extension(file_path.name)
+            if not extension:
+                return
+            logger.info(f"Loading {file_path.name} for extension: {extension}")
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                logger.warning(f"JSON {file_path} does not contain a list of entries.")
+                return
+            self.json_files[str(file_path)] = data
+            if extension not in self.entries_by_extension:
+                self.entries_by_extension[extension] = []
+            for row in data:
+                keyword = str(row.get("keyword", "")).strip()
+                if not keyword:
+                    continue
+                is_regex = bool(row.get("is_regex", False))
+                entry = HoverEntry(
+                    keyword=keyword,
+                    description=row.get("description", ""),
+                    category=row.get("category"),
+                    source_file=str(file_path),
+                    additional_info={
+                        k: v
+                        for k, v in row.items()
+                        if k
+                        not in [
+                            "keyword",
+                            "description",
+                            "category",
+                            "source_file",
+                            "is_regex",
+                        ]
+                        and v
+                    },
+                    is_regex=is_regex,
+                )
+                self.entries_by_extension[extension].append(entry)
+            logger.info(
+                f"Loaded {len(data)} entries from {file_path.name} "
+                f"for extension: {extension}"
+            )
+        except Exception as e:
+            logger.error(f"Error loading JSON {file_path}: {e}")
+
+    def parse_filename_extension(self, filename: str) -> str | None:
+        """Parse filename to determine target file extension."""
+        match = self.FILENAME_PATTERN.match(filename)
+        if not match:
+            logger.warning(
+                f"Filename {filename} doesn't match expected pattern hovercraft.<ext>.json"
+            )
+            return None
+
+        extension = match.group(1)
+        # Ensure it starts with a dot
+        if not extension.startswith("."):
+            extension = f".{extension}"
+
+        return extension
+
+    def remove_json_file(self, file_path: str):
+        """Remove entries from a specific JSON file."""
+        # Find which extension this file was for
+        path = Path(file_path)
+        extension = self.parse_filename_extension(path.name)
+
+        if not extension or extension not in self.entries_by_extension:
+            return
+
+        # Remove entries that came from this file
+        before_count = len(self.entries_by_extension[extension])
+        self.entries_by_extension[extension] = [
+            entry
+            for entry in self.entries_by_extension[extension]
+            if entry.source_file != file_path
+        ]
+        removed_count = before_count - len(self.entries_by_extension[extension])
+
+        # Clean up empty extension dictionary
+        if not self.entries_by_extension[extension]:
+            del self.entries_by_extension[extension]
+
+        # Remove from json_files dict
+        if file_path in self.json_files:
+            del self.json_files[file_path]
+
+        logger.info(f"Removed {removed_count} entries from {file_path}")
+
+    def reload_json_file(self, file_path: str):
+        """Reload a specific JSON file."""
+        # Remove old entries from this file
+        self.remove_json_file(file_path)
+
+        # Load the file again
+        path = Path(file_path)
+        if self.FILENAME_PATTERN.match(path.name):
+            self.load_json_file(path)
+
+    def get_hover_info(self, word: str, file_extension: str) -> str | None:
+        """Get hover information for a word in a specific file type. Show all matching entries, including regex."""
+
+        logger.debug(
+            f"get_hover_info called: word='{word}', extension='{file_extension}'"
+        )
+
+        # Normalize the extension
+        if not file_extension.startswith("."):
+            file_extension = f".{file_extension}"
+
+        logger.debug(f"Normalized extension: '{file_extension}'")
+        logger.debug(f"Available extensions: {list(self.entries_by_extension.keys())}")
+
+        # Look up entries for this file extension
+        extension_entries = self.entries_by_extension.get(file_extension, [])
+        logger.debug(f"Found {len(extension_entries)} entries for {file_extension}")
+
+        # Find all entries for this word (case-insensitive or regex)
+        matches = []
+        for entry in extension_entries:
+            if entry.is_regex:
+                try:
+                    if re.fullmatch(entry.keyword, word):
+                        entry.word = word
+                        matches.append(entry)
+                except re.error:
+                    logger.warning(f"Invalid regex pattern: {entry.keyword}")
+            else:
+                if entry.keyword.lower() == word.lower():
+                    entry.word = word
+                    matches.append(entry)
+
+        if not matches:
+            logger.debug(f"No hover entry found for '{word}'")
+            return None
+
+        logger.debug(f"Found {len(matches)} hover entries for '{word}'")
+
+        # Build markdown content for all matches
+        output = []
+        for idx, entry in enumerate(matches, 1):
+            lines = [f"## {idx}. {entry.word}"]
+            if entry.is_regex:
+                lines.append(f"*Regex match*: {entry.keyword}")
+                lines.append("")
+            if entry.category:
+                lines.append(f"*Category: {entry.category}*")
+                lines.append("")
+            lines.append(entry.description)
+            lines.append("")
+            if entry.additional_info:
+                lines.append("")
+                lines.append("### Additional Information")
+                for key, value in entry.additional_info.items():
+                    lines.append(f"- **{key.replace('_', ' ').title()}**: {value}")
             output.append("\n".join(lines))
         return "\n- - -\n".join(output)
 

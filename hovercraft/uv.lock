@@ -71,7 +71,6 @@ wheels = [
 
 [[package]]
 name = "hovercraft"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pandas" },
