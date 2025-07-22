@@ -1,6 +1,6 @@
 {
   "name": "hovercraft",
-  "displayName": "Hovercraft - CSV-Powered Hover Provider for VSCode",
+  "displayName": "`hovercraft` - CSV-Powered Hover Provider for VSCode",
   "description": "Provides hover information from CSV files in your workspace",
   "version": "0.1.1",
   "publisher": "kdheepak",
