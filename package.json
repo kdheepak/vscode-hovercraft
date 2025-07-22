@@ -2,7 +2,7 @@
   "name": "hovercraft",
   "displayName": "`hovercraft` - File Based Hover Provider for VSCode",
   "description": "Provides hover information from files in your workspace",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "kdheepak",
   "repository": {
     "type": "git",
