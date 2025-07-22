@@ -52,7 +52,6 @@ Examples:
 
 - VSCode 1.75.0 or higher
 - Python environment is automatically managed by the extension using `uv`
-- No manual Python installation required!
 
 ## Troubleshooting
 
@@ -85,4 +84,4 @@ MIT License - see [LICENSE](./LICENSE) file for details
 
 ---
 
-Made with ❤️ for developers who love documentation
+For developers who love documentation
