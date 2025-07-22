@@ -86,9 +86,10 @@ async function installUv(outputChannel: vscode.OutputChannel): Promise<string> {
   }
 }
 
-async function ensureUvInstalled(context: vscode.ExtensionContext): Promise<string> {
-  const outputChannel = vscode.window.createOutputChannel("My Language Server Setup");
-
+async function ensureUvInstalled(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel,
+): Promise<string> {
   // Check if uv is already available
   let uvPath = await findUvPath();
   if (uvPath) {
@@ -120,9 +121,11 @@ async function ensureUvInstalled(context: vscode.ExtensionContext): Promise<stri
   );
 }
 
-async function ensureLanguageServerDependencies(serverPath: string, uvPath: string): Promise<void> {
-  const outputChannel = vscode.window.createOutputChannel("My Language Server Setup");
-
+async function ensureLanguageServerDependencies(
+  serverPath: string,
+  uvPath: string,
+  outputChannel: vscode.OutputChannel,
+): Promise<void> {
   try {
     // Always remove any existing .venv to avoid cross-machine issues
     const venvPath = path.join(serverPath, ".venv");
@@ -145,11 +148,13 @@ async function ensureLanguageServerDependencies(serverPath: string, uvPath: stri
 }
 
 export async function activate(context: vscode.ExtensionContext) {
+  const outputChannel = vscode.window.createOutputChannel("Hovercraft Language Server Trace");
+
   let uvPath: string;
 
   try {
     // Ensure uv is installed
-    uvPath = await ensureUvInstalled(context);
+    uvPath = await ensureUvInstalled(context, outputChannel);
 
     // Store uv path in global state
     context.globalState.update("uvPath", uvPath);
@@ -171,7 +176,7 @@ export async function activate(context: vscode.ExtensionContext) {
         cancellable: false,
       },
       async () => {
-        await ensureLanguageServerDependencies(serverPath, uvPath);
+        await ensureLanguageServerDependencies(serverPath, uvPath, outputChannel);
       },
     );
   } catch (error) {
@@ -208,7 +213,7 @@ export async function activate(context: vscode.ExtensionContext) {
       fileEvents: vscode.workspace.createFileSystemWatcher("**/.vscode/hovercraft.*.csv"),
     },
     outputChannelName: "Hovercraft Language Server",
-    traceOutputChannel: vscode.window.createOutputChannel("Hovercraft Language Server Trace"),
+    traceOutputChannel: outputChannel,
     revealOutputChannelOn: 3, // Show output on error
   };
 

@@ -177,7 +177,7 @@ class CSVHoverProvider:
         logger.info(f"Removed {len(entries_to_remove)} entries from {file_path}")
 
     def get_hover_info(self, word: str, file_extension: str) -> str | None:
-        """Get hover information for a word in a specific file type."""
+        """Get hover information for a word in a specific file type. Show all matching entries."""
 
         logger.debug(
             f"get_hover_info called: word='{word}', extension='{file_extension}'"
@@ -199,39 +199,36 @@ class CSVHoverProvider:
                 f"Looking for '{word.lower()}' in: {list(extension_entries.keys())[:5]}..."
             )  # Show first 5
 
-        entry = extension_entries.get(word.lower())
+        # Find all entries for this word (case-insensitive)
+        matches = [
+            entry for key, entry in extension_entries.items() if key == word.lower()
+        ]
 
-        if entry:
-            logger.debug(f"Found hover entry for '{word}'")
-        else:
+        if not matches:
             logger.debug(f"No hover entry found for '{word}'")
-
-        if not entry:
             return None
 
-        # Build markdown content
-        lines = [f"## {entry.keyword}"]
+        logger.debug(f"Found {len(matches)} hover entries for '{word}'")
 
-        if entry.category:
-            lines.append(f"*Category: {entry.category}*")
-
-        lines.append("")  # Empty line
-        lines.append(entry.description)
-
-        # Add additional info if available
-        if entry.additional_info:
+        # Build markdown content for all matches
+        output = []
+        for idx, entry in enumerate(matches, 1):
+            lines = [f"## {entry.keyword}"]
+            if entry.category:
+                lines.append(f"*Category: {entry.category}*")
             lines.append("")
-            lines.append("### Additional Information")
-            for key, value in entry.additional_info.items():
-                lines.append(f"- **{key.replace('_', ' ').title()}**: {value}")
-
-        # Add source file in debug mode
-        if logger.isEnabledFor(logging.DEBUG):
-            lines.append("")
-            if entry.source_file is not None:
-                lines.append(f"*Source: {Path(entry.source_file).name}*")
-
-        return "\n".join(lines)
+            lines.append(entry.description)
+            if entry.additional_info:
+                lines.append("")
+                lines.append("### Additional Information")
+                for key, value in entry.additional_info.items():
+                    lines.append(f"- **{key.replace('_', ' ').title()}**: {value}")
+            if logger.isEnabledFor(logging.DEBUG):
+                lines.append("")
+                if entry.source_file is not None:
+                    lines.append(f"*Source: {Path(entry.source_file).name}*")
+            output.append("\n".join(lines))
+        return "\n---\n".join(output)
 
     def get_supported_extensions(self) -> Set[str]:
         """Get all file extensions that have hover data."""
