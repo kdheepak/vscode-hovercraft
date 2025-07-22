@@ -33,7 +33,7 @@ class CSVHoverProvider:
         self.workspace_path = workspace_path
         self.vscode_path = workspace_path / ".vscode"
         # Store entries per file extension
-        self.entries_by_extension: dict[str, dict[str, HoverEntry]] = {}
+        self.entries_by_extension: dict[str, list[HoverEntry]] = {}
         self.csv_files: dict[str, pd.DataFrame] = {}
 
     @property
@@ -103,9 +103,9 @@ class CSVHoverProvider:
                 )
                 return
 
-            # Initialize extension dictionary if needed
+            # Initialize extension list if needed
             if extension not in self.entries_by_extension:
-                self.entries_by_extension[extension] = {}
+                self.entries_by_extension[extension] = []
 
             # Process each row
             for _, row in df.iterrows():
@@ -127,7 +127,7 @@ class CSVHoverProvider:
                     },
                 )
 
-                self.entries_by_extension[extension][keyword.lower()] = entry
+                self.entries_by_extension[extension].append(entry)
 
             logger.info(
                 f"Loaded {len(df)} entries from {file_path.name} "
@@ -157,14 +157,13 @@ class CSVHoverProvider:
             return
 
         # Remove entries that came from this file
-        entries_to_remove = [
-            keyword
-            for keyword, entry in self.entries_by_extension[extension].items()
-            if entry.source_file == file_path
+        before_count = len(self.entries_by_extension[extension])
+        self.entries_by_extension[extension] = [
+            entry
+            for entry in self.entries_by_extension[extension]
+            if entry.source_file != file_path
         ]
-
-        for keyword in entries_to_remove:
-            del self.entries_by_extension[extension][keyword]
+        removed_count = before_count - len(self.entries_by_extension[extension])
 
         # Clean up empty extension dictionary
         if not self.entries_by_extension[extension]:
@@ -174,7 +173,7 @@ class CSVHoverProvider:
         if file_path in self.csv_files:
             del self.csv_files[file_path]
 
-        logger.info(f"Removed {len(entries_to_remove)} entries from {file_path}")
+        logger.info(f"Removed {removed_count} entries from {file_path}")
 
     def get_hover_info(self, word: str, file_extension: str) -> str | None:
         """Get hover information for a word in a specific file type. Show all matching entries."""
@@ -191,17 +190,14 @@ class CSVHoverProvider:
         logger.debug(f"Available extensions: {list(self.entries_by_extension.keys())}")
 
         # Look up entries for this file extension
-        extension_entries = self.entries_by_extension.get(file_extension, {})
+        extension_entries = self.entries_by_extension.get(file_extension, [])
         logger.debug(f"Found {len(extension_entries)} entries for {file_extension}")
-
-        if extension_entries and word:
-            logger.debug(
-                f"Looking for '{word.lower()}' in: {list(extension_entries.keys())[:5]}..."
-            )  # Show first 5
 
         # Find all entries for this word (case-insensitive)
         matches = [
-            entry for key, entry in extension_entries.items() if key == word.lower()
+            entry
+            for entry in extension_entries
+            if entry.keyword.lower() == word.lower()
         ]
 
         if not matches:
@@ -228,7 +224,7 @@ class CSVHoverProvider:
                 if entry.source_file is not None:
                     lines.append(f"*Source: {Path(entry.source_file).name}*")
             output.append("\n".join(lines))
-        return "\n---\n".join(output)
+        return "\n- - -\n".join(output)
 
     def get_supported_extensions(self) -> Set[str]:
         """Get all file extensions that have hover data."""
