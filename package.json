@@ -20,6 +20,28 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "hovercraft.syncDependencies",
+        "title": "Sync Dependencies",
+        "category": "Hovercraft"
+      },
+      {
+        "command": "hovercraft.startServer",
+        "title": "Start Language Server",
+        "category": "Hovercraft"
+      },
+      {
+        "command": "hovercraft.stopServer",
+        "title": "Stop Language Server",
+        "category": "Hovercraft"
+      },
+      {
+        "command": "hovercraft.restartServer",
+        "title": "Restart Language Server",
+        "category": "Hovercraft"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Hovercraft",

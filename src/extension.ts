@@ -131,24 +131,117 @@ async function ensureLanguageServerDependencies(
   outputChannel: vscode.OutputChannel,
 ): Promise<void> {
   try {
-    // Always remove any existing .venv to avoid cross-machine issues
     const venvPath = path.join(serverPath, ".venv");
-    if (fs.existsSync(venvPath)) {
-      outputChannel.appendLine("Removing existing virtual environment to ensure compatibility...");
-      outputChannel.show();
-      // Remove .venv directory recursively
-      fs.rmSync(venvPath, { recursive: true, force: true });
-      outputChannel.appendLine("Old virtual environment removed.");
+    
+    // Only sync if .venv doesn't exist
+    if (!fs.existsSync(venvPath)) {
+      outputChannel.appendLine("Installing dependencies...");
+      await execAsync(`"${uvPath}" sync`, { cwd: serverPath });
+      outputChannel.appendLine("Dependencies ready.");
+    } else {
+      outputChannel.appendLine("Virtual environment already exists, skipping dependency installation.");
     }
-
-    // Always sync to ensure dependencies are up to date
-    outputChannel.appendLine("Installing/updating dependencies...");
-    await execAsync(`"${uvPath}" sync`, { cwd: serverPath });
-    outputChannel.appendLine("Dependencies ready.");
   } catch (error) {
     outputChannel.appendLine(`Error: ${error}`);
     throw new Error(`Failed to set up language server: ${error}`);
   }
+}
+
+async function syncDependencies(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel,
+): Promise<void> {
+  let uvPath: string;
+  
+  // Read uvPath from settings if provided
+  const configUvPath = vscode.workspace.getConfiguration("hovercraft").get<string>("uvPath");
+  
+  if (configUvPath && configUvPath.trim()) {
+    uvPath = configUvPath.trim();
+  } else {
+    // Use stored uvPath or ensure uv is installed
+    uvPath = context.globalState.get("uvPath") || await ensureUvInstalled(context, outputChannel);
+  }
+
+  const serverPath = context.asAbsolutePath("hovercraft");
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Syncing Hovercraft Dependencies",
+      cancellable: false,
+    },
+    async () => {
+      try {
+        outputChannel.appendLine("Manually syncing dependencies...");
+        await execAsync(`"${uvPath}" sync`, { cwd: serverPath });
+        outputChannel.appendLine("Dependencies synced successfully.");
+        vscode.window.showInformationMessage("Hovercraft dependencies synced successfully.");
+      } catch (error) {
+        outputChannel.appendLine(`Error syncing dependencies: ${error}`);
+        vscode.window.showErrorMessage(`Failed to sync dependencies: ${error}`);
+        throw error;
+      }
+    }
+  );
+}
+
+async function startLanguageServer(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel,
+): Promise<void> {
+  if (client && client.state === 2) { // Running state
+    vscode.window.showInformationMessage("Language server is already running.");
+    return;
+  }
+
+  try {
+    await client.start();
+    vscode.window.showInformationMessage("Hovercraft language server started.");
+  } catch (error) {
+    outputChannel.appendLine(`Error starting language server: ${error}`);
+    vscode.window.showErrorMessage(`Failed to start language server: ${error}`);
+  }
+}
+
+async function stopLanguageServer(outputChannel: vscode.OutputChannel): Promise<void> {
+  if (!client || client.state === 1) { // Stopped state
+    vscode.window.showInformationMessage("Language server is not running.");
+    return;
+  }
+
+  try {
+    await client.stop();
+    vscode.window.showInformationMessage("Hovercraft language server stopped.");
+  } catch (error) {
+    outputChannel.appendLine(`Error stopping language server: ${error}`);
+    vscode.window.showErrorMessage(`Failed to stop language server: ${error}`);
+  }
+}
+
+async function restartLanguageServer(
+  context: vscode.ExtensionContext,
+  outputChannel: vscode.OutputChannel,
+): Promise<void> {
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Restarting Hovercraft Language Server",
+      cancellable: false,
+    },
+    async () => {
+      try {
+        if (client && client.state === 2) { // Running state
+          await client.stop();
+        }
+        await client.start();
+        vscode.window.showInformationMessage("Hovercraft language server restarted.");
+      } catch (error) {
+        outputChannel.appendLine(`Error restarting language server: ${error}`);
+        vscode.window.showErrorMessage(`Failed to restart language server: ${error}`);
+      }
+    }
+  );
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -226,6 +319,29 @@ export async function activate(context: vscode.ExtensionContext) {
     serverOptions,
     clientOptions,
   );
+
+  // Register commands
+  const syncDependenciesCommand = vscode.commands.registerCommand(
+    "hovercraft.syncDependencies",
+    () => syncDependencies(context, outputChannel)
+  );
+  const startServerCommand = vscode.commands.registerCommand(
+    "hovercraft.startServer",
+    () => startLanguageServer(context, outputChannel)
+  );
+  const stopServerCommand = vscode.commands.registerCommand(
+    "hovercraft.stopServer",
+    () => stopLanguageServer(outputChannel)
+  );
+  const restartServerCommand = vscode.commands.registerCommand(
+    "hovercraft.restartServer",
+    () => restartLanguageServer(context, outputChannel)
+  );
+  
+  context.subscriptions.push(syncDependenciesCommand);
+  context.subscriptions.push(startServerCommand);
+  context.subscriptions.push(stopServerCommand);
+  context.subscriptions.push(restartServerCommand);
 
   // Register the client
   context.subscriptions.push(client);
