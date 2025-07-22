@@ -82,7 +82,8 @@ Alternatively, add this to your `settings.json`:
 }
 ```
 
-If not set, the extension will use the default `uv` in your system PATH.
+If not set, the extension will use the default `uv` in your system PATH. If `uv` is not available,
+it will be installed automatically by the extension.
 
 ## Troubleshooting
 
