@@ -5,6 +5,7 @@ import sys
 import logging
 import argparse
 from pathlib import Path
+import urllib.parse
 
 from pygls.server import LanguageServer
 from lsprotocol.types import (
@@ -48,7 +49,9 @@ def initialize(params: InitializeParams):
     logger.info("Hovercraft server initializing...")
 
     if params.workspace_folders:
-        workspace_path = Path(params.workspace_folders[0].uri.replace("file://", ""))
+        uri = params.workspace_folders[0].uri
+        parsed = urllib.parse.urlparse(uri)
+        workspace_path = Path(urllib.parse.unquote(parsed.path.lstrip("/")))
         server.csv_hover_provider = CSVHoverProvider(workspace_path)
         csv_supported_extensions = set()
         csv_entry_count = 0
