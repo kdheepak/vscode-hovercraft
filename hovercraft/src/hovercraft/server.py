@@ -5,7 +5,6 @@ import sys
 import logging
 import argparse
 from pathlib import Path
-from typing import Optional
 
 from pygls.server import LanguageServer
 from lsprotocol.types import (
@@ -51,18 +50,27 @@ def initialize(params: InitializeParams):
     if params.workspace_folders:
         workspace_path = Path(params.workspace_folders[0].uri.replace("file://", ""))
         server.csv_hover_provider = CSVHoverProvider(workspace_path)
-        server.csv_hover_provider.load_all_csv_files()
-        server.json_hover_provider = JSONHoverProvider(workspace_path)
-        server.json_hover_provider.load_all_json_files()
+        csv_supported_extensions = set()
+        csv_entry_count = 0
+        if server.csv_hover_provider:
+            server.csv_hover_provider.load_all_csv_files()
+            csv_supported_extensions = (
+                server.csv_hover_provider.get_supported_extensions()
+            )
+            csv_entry_count = server.csv_hover_provider.entry_count
 
-        supported_extensions = (
-            server.csv_hover_provider.get_supported_extensions()
-            | server.json_hover_provider.get_supported_extensions()
-        )
-        total_entries = (
-            server.csv_hover_provider.entry_count
-            + server.json_hover_provider.entry_count
-        )
+        server.json_hover_provider = JSONHoverProvider(workspace_path)
+        json_supported_extensions = set()
+        json_entry_count = 0
+        if server.json_hover_provider:
+            server.json_hover_provider.load_all_json_files()
+            json_supported_extensions = (
+                server.json_hover_provider.get_supported_extensions()
+            )
+            json_entry_count = server.json_hover_provider.entry_count
+
+        supported_extensions = csv_supported_extensions | json_supported_extensions
+        total_entries = csv_entry_count + json_entry_count
         logger.info(
             f"Initialized with workspace: {workspace_path}\n"
             f"Loaded {total_entries} entries\n"
