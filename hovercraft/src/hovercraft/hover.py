@@ -20,6 +20,8 @@ class HoverEntry:
     category: str | None = None
     source_file: str | None = None
     additional_info: dict[str, str] = field(default_factory=dict)
+    is_regex: bool = False
+    word: str = field(default="")
 
 
 class CSVHoverProvider:
@@ -112,7 +114,10 @@ class CSVHoverProvider:
                 keyword = row["keyword"].strip()
                 if not keyword:
                     continue
-
+                is_regex = False
+                if "is_regex" in df.columns:
+                    val = row["is_regex"].strip().lower()
+                    is_regex = val in ("1", "true", "yes", "y")
                 entry = HoverEntry(
                     keyword=keyword,
                     description=row["description"],
@@ -122,9 +127,16 @@ class CSVHoverProvider:
                         col: row[col]
                         for col in df.columns
                         if col
-                        not in ["keyword", "description", "category", "source_file"]
+                        not in [
+                            "keyword",
+                            "description",
+                            "category",
+                            "source_file",
+                            "is_regex",
+                        ]
                         and row[col]
                     },
+                    is_regex=is_regex,
                 )
 
                 self.entries_by_extension[extension].append(entry)
@@ -176,7 +188,7 @@ class CSVHoverProvider:
         logger.info(f"Removed {removed_count} entries from {file_path}")
 
     def get_hover_info(self, word: str, file_extension: str) -> str | None:
-        """Get hover information for a word in a specific file type. Show all matching entries."""
+        """Get hover information for a word in a specific file type. Show all matching entries, including regex."""
 
         logger.debug(
             f"get_hover_info called: word='{word}', extension='{file_extension}'"
@@ -193,12 +205,20 @@ class CSVHoverProvider:
         extension_entries = self.entries_by_extension.get(file_extension, [])
         logger.debug(f"Found {len(extension_entries)} entries for {file_extension}")
 
-        # Find all entries for this word (case-insensitive)
-        matches = [
-            entry
-            for entry in extension_entries
-            if entry.keyword.lower() == word.lower()
-        ]
+        # Find all entries for this word (case-insensitive or regex)
+        matches = []
+        for entry in extension_entries:
+            if entry.is_regex:
+                try:
+                    if re.fullmatch(entry.keyword, word):
+                        entry.word = word
+                        matches.append(entry)
+                except re.error:
+                    logger.warning(f"Invalid regex pattern: {entry.keyword}")
+            else:
+                if entry.keyword.lower() == word.lower():
+                    entry.word = word
+                    matches.append(entry)
 
         if not matches:
             logger.debug(f"No hover entry found for '{word}'")
@@ -209,11 +229,15 @@ class CSVHoverProvider:
         # Build markdown content for all matches
         output = []
         for idx, entry in enumerate(matches, 1):
-            lines = [f"## {entry.keyword}"]
+            lines = [f"## {idx}. {entry.word}"]
+            if entry.is_regex:
+                lines.append(f"*Regex match*: {entry.keyword}")
+                lines.append("")
             if entry.category:
                 lines.append(f"*Category: {entry.category}*")
-            lines.append("")
+                lines.append("")
             lines.append(entry.description)
+            lines.append("")
             if entry.additional_info:
                 lines.append("")
                 lines.append("### Additional Information")
