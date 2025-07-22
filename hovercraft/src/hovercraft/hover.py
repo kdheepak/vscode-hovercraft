@@ -1,10 +1,9 @@
 """CSV-based hover information provider."""
 
-import csv
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Set
 from dataclasses import dataclass, field
 
 import pandas as pd
@@ -18,9 +17,9 @@ class HoverEntry:
 
     keyword: str
     description: str
-    category: Optional[str] = None
-    source_file: Optional[str] = None
-    additional_info: Dict[str, str] = field(default_factory=dict)
+    category: str | None = None
+    source_file: str | None = None
+    additional_info: dict[str, str] = field(default_factory=dict)
 
 
 class CSVHoverProvider:
@@ -34,8 +33,8 @@ class CSVHoverProvider:
         self.workspace_path = workspace_path
         self.vscode_path = workspace_path / ".vscode"
         # Store entries per file extension
-        self.entries_by_extension: Dict[str, Dict[str, HoverEntry]] = {}
-        self.csv_files: Dict[str, pd.DataFrame] = {}
+        self.entries_by_extension: dict[str, dict[str, HoverEntry]] = {}
+        self.csv_files: dict[str, pd.DataFrame] = {}
 
     @property
     def entry_count(self) -> int:
@@ -45,7 +44,7 @@ class CSVHoverProvider:
             total += len(ext_entries)
         return total
 
-    def parse_filename_extension(self, filename: str) -> Optional[str]:
+    def parse_filename_extension(self, filename: str) -> str | None:
         """Parse filename to determine target file extension."""
         match = self.FILENAME_PATTERN.match(filename)
         if not match:
@@ -176,7 +175,7 @@ class CSVHoverProvider:
 
         logger.info(f"Removed {len(entries_to_remove)} entries from {file_path}")
 
-    def get_hover_info(self, word: str, file_extension: str) -> Optional[str]:
+    def get_hover_info(self, word: str, file_extension: str) -> str | None:
         """Get hover information for a word in a specific file type."""
 
         logger.debug(
@@ -228,7 +227,8 @@ class CSVHoverProvider:
         # Add source file in debug mode
         if logger.isEnabledFor(logging.DEBUG):
             lines.append("")
-            lines.append(f"*Source: {Path(entry.source_file).name}*")
+            if entry.source_file is not None:
+                lines.append(f"*Source: {Path(entry.source_file).name}*")
 
         return "\n".join(lines)
 

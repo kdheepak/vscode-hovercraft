@@ -36,7 +36,7 @@ class HovercraftServer(LanguageServer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.hover_provider: Optional[CSVHoverProvider] = None
+        self.hover_provider: CSVHoverProvider | None = None
 
 
 server = HovercraftServer("hovercraft", "v0.1.0")
@@ -84,7 +84,7 @@ def did_change_watched_files(params: DidChangeWatchedFilesParams):
 
 
 @server.feature("textDocument/hover")
-def hover(params: HoverParams) -> Optional[Hover]:
+def hover(params: HoverParams) -> Hover | None:
     """Provide hover information."""
     if not server.hover_provider:
         return None
