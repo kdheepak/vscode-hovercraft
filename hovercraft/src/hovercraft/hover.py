@@ -121,7 +121,8 @@ class CSVHoverProvider:
                     additional_info={
                         col: row[col]
                         for col in df.columns
-                        if col not in ["keyword", "description", "category"]
+                        if col
+                        not in ["keyword", "description", "category", "source_file"]
                         and row[col]
                     },
                 )

@@ -29,6 +29,7 @@ any text pattern in your codebase.
 
   - `keyword`: The text to match in your code
   - `description`: The hover text to display
+  - `source_file`: (optional) The source file where this hover is defined
   - `category`: (optional) A category for grouping hovers
   - `url`: (optional) A URL to link to for more information
 
