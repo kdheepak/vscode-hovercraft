@@ -35,14 +35,14 @@ class CSVHoverProvider:
     def __init__(self, workspace_path: Path):
         self.workspace_path = workspace_path
         # Store entries per file extension
-        self.entries_by_extension: dict[str, list[HoverEntry]] = {}
+        self.entries: dict[str, list[HoverEntry]] = {}
         self.csv_files: dict[str, pd.DataFrame] = {}
 
     @property
     def entry_count(self) -> int:
         """Get the total number of hover entries."""
         total = 0
-        for ext_entries in self.entries_by_extension.values():
+        for ext_entries in self.entries.values():
             total += len(ext_entries)
         return total
 
@@ -109,8 +109,8 @@ class CSVHoverProvider:
                 return
 
             # Initialize extension list if needed
-            if extension not in self.entries_by_extension:
-                self.entries_by_extension[extension] = []
+            if extension not in self.entries:
+                self.entries[extension] = []
 
             # Process each row
             for _, row in df.iterrows():
@@ -142,7 +142,7 @@ class CSVHoverProvider:
                     is_regex=is_regex,
                 )
 
-                self.entries_by_extension[extension].append(entry)
+                self.entries[extension].append(entry)
 
             logger.info(
                 f"Loaded {len(df)} entries from {file_path.name} "
@@ -168,21 +168,19 @@ class CSVHoverProvider:
         path = Path(file_path)
         extension = self.parse_filename_extension(path.name)
 
-        if not extension or extension not in self.entries_by_extension:
+        if not extension or extension not in self.entries:
             return
 
         # Remove entries that came from this file
-        before_count = len(self.entries_by_extension[extension])
-        self.entries_by_extension[extension] = [
-            entry
-            for entry in self.entries_by_extension[extension]
-            if entry.source_file != file_path
+        before_count = len(self.entries[extension])
+        self.entries[extension] = [
+            entry for entry in self.entries[extension] if entry.source_file != file_path
         ]
-        removed_count = before_count - len(self.entries_by_extension[extension])
+        removed_count = before_count - len(self.entries[extension])
 
         # Clean up empty extension dictionary
-        if not self.entries_by_extension[extension]:
-            del self.entries_by_extension[extension]
+        if not self.entries[extension]:
+            del self.entries[extension]
 
         # Remove from csv_files dict
         if file_path in self.csv_files:
@@ -202,10 +200,10 @@ class CSVHoverProvider:
             file_extension = f".{file_extension}"
 
         logger.debug(f"Normalized extension: '{file_extension}'")
-        logger.debug(f"Available extensions: {list(self.entries_by_extension.keys())}")
+        logger.debug(f"Available extensions: {list(self.entries.keys())}")
 
         # Look up entries for this file extension
-        extension_entries = self.entries_by_extension.get(file_extension, [])
+        extension_entries = self.entries.get(file_extension, [])
         logger.debug(f"Found {len(extension_entries)} entries for {file_extension}")
 
         # Find all entries for this word (case-insensitive or regex)
@@ -255,7 +253,7 @@ class CSVHoverProvider:
 
     def get_supported_extensions(self) -> Set[str]:
         """Get all file extensions that have hover data."""
-        return set(self.entries_by_extension.keys())
+        return set(self.entries.keys())
 
 
 class JSONHoverProvider:
@@ -265,14 +263,14 @@ class JSONHoverProvider:
 
     def __init__(self, workspace_path: Path):
         self.workspace_path = workspace_path
-        self.entries_by_extension: dict[str, list[HoverEntry]] = {}
+        self.entries: dict[str, list[HoverEntry]] = {}
         self.json_files: dict[str, list[dict]] = {}
 
     @property
     def entry_count(self) -> int:
         """Get the total number of hover entries."""
         total = 0
-        for ext_entries in self.entries_by_extension.values():
+        for ext_entries in self.entries.values():
             total += len(ext_entries)
         return total
 
@@ -307,8 +305,8 @@ class JSONHoverProvider:
                 logger.warning(f"JSON {file_path} does not contain a list of entries.")
                 return
             self.json_files[str(file_path)] = data
-            if extension not in self.entries_by_extension:
-                self.entries_by_extension[extension] = []
+            if extension not in self.entries:
+                self.entries[extension] = []
             for row in data:
                 keyword = str(row.get("keyword", "")).strip()
                 if not keyword:
@@ -334,7 +332,7 @@ class JSONHoverProvider:
                     },
                     is_regex=is_regex,
                 )
-                self.entries_by_extension[extension].append(entry)
+                self.entries[extension].append(entry)
             logger.info(
                 f"Loaded {len(data)} entries from {file_path.name} "
                 f"for extension: {extension}"
@@ -364,21 +362,19 @@ class JSONHoverProvider:
         path = Path(file_path)
         extension = self.parse_filename_extension(path.name)
 
-        if not extension or extension not in self.entries_by_extension:
+        if not extension or extension not in self.entries:
             return
 
         # Remove entries that came from this file
-        before_count = len(self.entries_by_extension[extension])
-        self.entries_by_extension[extension] = [
-            entry
-            for entry in self.entries_by_extension[extension]
-            if entry.source_file != file_path
+        before_count = len(self.entries[extension])
+        self.entries[extension] = [
+            entry for entry in self.entries[extension] if entry.source_file != file_path
         ]
-        removed_count = before_count - len(self.entries_by_extension[extension])
+        removed_count = before_count - len(self.entries[extension])
 
         # Clean up empty extension dictionary
-        if not self.entries_by_extension[extension]:
-            del self.entries_by_extension[extension]
+        if not self.entries[extension]:
+            del self.entries[extension]
 
         # Remove from json_files dict
         if file_path in self.json_files:
@@ -408,10 +404,10 @@ class JSONHoverProvider:
             file_extension = f".{file_extension}"
 
         logger.debug(f"Normalized extension: '{file_extension}'")
-        logger.debug(f"Available extensions: {list(self.entries_by_extension.keys())}")
+        logger.debug(f"Available extensions: {list(self.entries.keys())}")
 
         # Look up entries for this file extension
-        extension_entries = self.entries_by_extension.get(file_extension, [])
+        extension_entries = self.entries.get(file_extension, [])
         logger.debug(f"Found {len(extension_entries)} entries for {file_extension}")
 
         # Find all entries for this word (case-insensitive or regex)
@@ -457,4 +453,4 @@ class JSONHoverProvider:
 
     def get_supported_extensions(self) -> Set[str]:
         """Get all file extensions that have hover data."""
-        return set(self.entries_by_extension.keys())
+        return set(self.entries.keys())
