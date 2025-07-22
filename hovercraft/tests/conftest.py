@@ -11,15 +11,15 @@ def temp_workspace():
     """Create a temporary workspace directory for testing."""
     with tempfile.TemporaryDirectory() as temp_dir:
         workspace_path = Path(temp_dir)
-        
+
         # Create .vscode directory
         vscode_dir = workspace_path / ".vscode"
         vscode_dir.mkdir()
-        
+
         # Create .data directory
         data_dir = workspace_path / ".data"
         data_dir.mkdir()
-        
+
         yield workspace_path
 
 
@@ -41,17 +41,17 @@ def sample_json_content():
             "keyword": "console",
             "description": "JavaScript console object",
             "category": "object",
-            "example": "console.log('hello')"
+            "example": "console.log('hello')",
         },
         {
             "keyword": "function",
             "description": "JavaScript function keyword",
-            "category": "keyword"
+            "category": "keyword",
         },
         {
             "keyword": "var.*",
             "description": "Variable declaration pattern",
             "category": "pattern",
-            "is_regex": True
-        }
+            "is_regex": True,
+        },
     ]
