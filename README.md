@@ -1,4 +1,4 @@
-# `hovercraft` - CSV/JSON-Powered Hover Provider for VSCode
+# `hovercraft` - File Based Hover Provider for VSCode
 
 `hovercraft` is a VSCode extension that provides customizable hover information for any programming
 language using simple CSV or JSON files. Define your own hover tooltips for keywords, functions,
