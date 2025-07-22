@@ -51,6 +51,25 @@ Examples:
 - VSCode 1.75.0 or higher
 - Python environment is automatically managed by the extension using `uv`
 
+## Configuration
+
+You can configure the location of your `uv` executable using VSCode settings:
+
+- Open Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
+- Type `Preferences: Open Settings (UI)`
+- Search for `Hovercraft: UV Path`
+- Set the path to your `uv` executable (e.g. `/usr/local/bin/uv`)
+
+Alternatively, add this to your `settings.json`:
+
+```json
+{
+  "hovercraft.uvPath": "/path/to/your/uv"
+}
+```
+
+If not set, the extension will use the default `uv` in your system PATH.
+
 ## Troubleshooting
 
 ### No hovers appearing

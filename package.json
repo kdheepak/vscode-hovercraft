@@ -34,6 +34,11 @@
             "error"
           ],
           "description": "Log level for the language server"
+        },
+        "hovercraft.uvPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the uv executable. Leave blank to use the default uv in your system PATH."
         }
       }
     }

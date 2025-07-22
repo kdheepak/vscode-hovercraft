@@ -152,17 +152,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let uvPath: string;
 
-  try {
+  // Read uvPath from settings if provided
+  const configUvPath = vscode.workspace.getConfiguration("hovercraft").get<string>("uvPath");
+
+  if (configUvPath && configUvPath.trim()) {
+    uvPath = configUvPath.trim();
+    outputChannel.appendLine(`Using uv from user configuration: ${uvPath}`);
+  } else {
     // Ensure uv is installed
     uvPath = await ensureUvInstalled(context, outputChannel);
-
-    // Store uv path in global state
     context.globalState.update("uvPath", uvPath);
-  } catch (error) {
-    vscode.window.showErrorMessage(
-      `Failed to set up uv: ${error}. Please install uv manually from https://github.com/astral-sh/uv`,
-    );
-    return;
   }
 
   const serverPath = context.asAbsolutePath("hovercraft");
